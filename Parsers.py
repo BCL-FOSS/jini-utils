@@ -1,3 +1,4 @@
+# Parses output(s) from to Jini probe tools reduces unnecessary token usage during LLM processing
 import logging
 import re
 import argparse
@@ -6,15 +7,14 @@ import xmltodict
 import json
 import asyncio
 
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger('passlib').setLevel(logging.ERROR)
-logger = logging.getLogger(__name__)
-
 class Parsers:
     def __init__(self):
-        pass
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger('passlib').setLevel(logging.ERROR)
+        logger = logging.getLogger(__name__)
+        self.logger = logger
     
-    def parse_traceroute_output(self, output: str, trace_type: str) -> list:
+    def parse_traceroute_output(self, output: str) -> list:
         """Parse traceroute output into structured hop data"""
         hops = []
         lines = output.strip().split('\n')
@@ -71,7 +71,7 @@ class Parsers:
                 "duration": sum_sent.get('seconds', 0)
             }
         except Exception as e:
-            logger.error(f"Error parsing iperf output: {e}")
+            self.logger.error(f"Error parsing iperf output: {e}")
             return {
                 "mode": "client",
                 "bandwidth": "Error",
@@ -231,19 +231,19 @@ class Parsers:
         
         return ', '.join(services)
     
-    async def parse_scan_results(self, action: str, probe_id: str, params_dict: dict, file_name: str = None, output: str = None):
+    async def parse_scan_results(self, action: str, target: str | None, interface: str | None, probe_id: str | None, file_name: str | None, output: str = None):
         
         match action:
             case str() as s if s.startswith("scan_"):                   
                 with open(file=f"{file_name}") as xml_file:
                     nmap_dict = xmltodict.parse(xml_file.read())
                     result = self.parse_nmap_json(nmap_dict)
-
+                    
             case str() as s if s.startswith("trcrt"):
                 hops = self.parse_traceroute_output(output, action)
                 result = {
                             "source": probe_id,
-                            "destination": params_dict['tool_prms']['target'],
+                            "destination": target,
                             "trace_type": action,
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                             "hops": hops
@@ -267,37 +267,53 @@ class Parsers:
                 packets = self.parse_pcap_summary(output)
                 result = {
                             "capture_mode": action,
-                            "interface": params_dict['interface'],
+                            "interface": interface,
                             "packet_count": len(packets),
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                             "packets": packets
                         }
-                
-        return result
-    
-parser = argparse.ArgumentParser(description="Parse network cli tool output for usage with LLMs. Reduces token usage by converting output to structured data.")
-parser.add_argument(
+        await asyncio.sleep(1.5)
+        self.logger.info(result)        
+        return
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Parse network cli tool output for usage with LLMs. Reduces token usage by converting output to structured data.")
+    parser.add_argument(
         '-t', '--tool', 
         type=str, 
-        help="selects appropiate parser for the tool output."
+        help="selects appropiate parser for the tool output",
+        default=None
     )
-   
-parser.add_argument(
-        '-w', '--ws_url', 
-        type=str, 
-        help="WebSocket URL for reporting results"
+    parser.add_argument(
+        '-f', '--file_name',
+        type=str,
+        help=".xml file name for nmap scan results",
+        default=None
     )
-parser.add_argument(
-    '-f', '--file_name',
-    type=str,
-    help=".xml file name for nmap scan results",
-    default=None
-)
-parser.add_argument(
-    '-prms', '--params',
-    type=str,
-    help="Scan data"
-)
-args = parser.parse_args()
-output_parser = Parsers()
-asyncio.run(output_parser.parse_scan_results(action=json.loads(args.tool)['action'], file_name=args.file_name, probe_id=args.probe_id, params_dict=json.loads(args.params), output=json.loads(args.tool)['output']))
+    parser.add_argument(
+        '-tar', '--target',
+        type=str,
+        help="Target of cli tool output",
+        default=None
+    )
+    parser.add_argument(
+        '-i', '--interface',
+        type=str,
+        help="Target of cli tool output",
+        default=None
+    )
+    parser.add_argument(
+        '-o', '--output',
+        type=str,
+        help="cli tool output to be parsed",
+        default=None
+    )
+    parser.add_argument(
+        '-pid', '--probe_id',
+        type=str,
+        help="Probe cli tool was run from",
+        default=None
+    )
+    args = parser.parse_args()
+    output_parser = Parsers()
+    asyncio.run(output_parser.parse_scan_results(action=args.tool, file_name=args.file_name, output=args.output, target=args.target, interface=args.interface, probe_id=args.probe_id))
