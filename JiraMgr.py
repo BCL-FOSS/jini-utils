@@ -3,6 +3,7 @@ import httpx
 import logging
 import argparse
 import asyncio
+import os
 
 class JiraSM():
     def __init__(self):
@@ -100,8 +101,8 @@ class JiraSM():
 
         return result
 
-    async def task_manager(self, task: str, params: dict, id: str, email: str, token: str):
-        self.set_jira_connection_info(cloud_id=id, auth_email=email, auth_token=token)
+    async def task_manager(self, task: str, params: dict):
+        self.set_jira_connection_info(cloud_id=os.getenv('JIRA_CLOUD_ID'), auth_email=os.getenv('JIRA_AUTH_EMAIL'), auth_token=os.getenv('JIRA_AUTH_TOKEN'))
         match task:
             case 'alert':
                 await self.send_alert(**params)
@@ -120,25 +121,7 @@ if __name__ == "__main__":
         help="parameters for email mgr task",
         default=None
     )
-    jira_opts.add_argument(
-        '-id', '--cloud_id',
-        type=str,
-        help="jira cloud id",
-        default=None
-    )
-    jira_opts.add_argument(
-        '-e', '--email',
-        type=str,
-        help="jira email attached to token",
-        default=None
-    )
-    jira_opts.add_argument(
-        '-k', '--auth_token',
-        type=str,
-        help="jira auth token",
-        default=None
-    )
     jira = JiraSM()
     args = jira_opts.parse_args()
-    asyncio.run(jira.task_manager(task=args.task, params=args.params, id=args.cloud_id, email=args.email, token=args.auth_token))
+    asyncio.run(jira.task_manager(task=args.task, params=args.params))
     
