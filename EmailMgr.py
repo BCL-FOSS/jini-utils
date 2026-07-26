@@ -4,6 +4,7 @@ from brevo_python.rest import ApiException
 import logging
 import argparse
 import asyncio
+import os
 
 class EmailSenderHandler:
     def __init__(self):
@@ -99,10 +100,11 @@ class EmailSenderHandler:
             api_instance.api_client.rest_client.pool_manager.clear()
 
     async def task_manager(self, task: str, params: dict):
+        self.set_brevo_api_key(brevo_api_key=os.environ.get('BREVO_API_KEY'))
         match task:
             case 'send':
                 self.send_transactional_email(**params)
-            case 'add_contact':
+            case 'add':
                 self.add_contact(**params)
         asyncio.sleep(1.5)
 
