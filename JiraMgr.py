@@ -35,7 +35,7 @@ class JiraSM():
             "Content-Type": "application/json"
         }
 
-        payload= json.dumps({
+        payload= {
                             "message": message,
                             "responders": [
                                 {"id": "4513b7ea-3b91-438f-b7e4-e3e54af9147c", "type": "team"},
@@ -56,7 +56,7 @@ class JiraSM():
                             "description": desc,
                             "priority": priority,
                             "extraProperties": extra_properties
-                        })
+                        }
 
         result_code, result = await self.make_http_request(url=url, headers=headers, data=payload, user= self.auth_email, passwd=self.auth_token)
         self.logger.info(f'status code: {result_code}\nresult json: {json.dumps(result)}')

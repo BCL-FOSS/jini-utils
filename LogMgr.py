@@ -5,6 +5,8 @@ import shutil
 import datetime
 from pathlib import Path
 import logging
+import argparse
+import asyncio
 
 class LogAlert:
     def __init__(self):
@@ -64,4 +66,17 @@ class LogAlert:
         except Exception as e:
             self.logger.error(f"Error compressing {source}: {e}")
 
+    async def task_manager(self, task: str, params: dict):
+            match task:
+                case 'write':
+                    await self.write_log(**params)
+                case 'rotate':
+                    await self.manage_log_rotation(**params)
 
+if __name__ == "__main__":
+    log_args = argparse.ArgumentParser(description="")
+    log_args.add_argument('-t', '--task', type=str, default=None)
+    log_args.add_argument('-p', '--params', type=dict, default=None)
+    logMgr = LogAlert()
+    args = log_args.parse_args()
+    asyncio.run(logMgr.task_manager(task=args.task, params=args.params))

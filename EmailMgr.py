@@ -106,7 +106,7 @@ class EmailSenderHandler:
                 self.send_transactional_email(**params)
             case 'add':
                 self.add_contact(**params)
-        asyncio.sleep(1.5)
+        await asyncio.sleep(1.5)
 
 if __name__ == "__main__":
     email_opts = argparse.ArgumentParser(description="Parse network cli tool output for usage with LLMs. Reduces token usage by converting output to structured data.")
