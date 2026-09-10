@@ -3,6 +3,7 @@ import logging
 from typing import List
 import argparse
 import asyncio
+import json
 
 class RedisDB:
    
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     )
     redis_opts.add_argument(
         '-p', '--params',
-        type=dict,
+        type=str,
         help="task parameters",
         default=None
     )
@@ -170,7 +171,7 @@ if __name__ == "__main__":
         )
     args = redis_opts.parse_args()
     redis_mgr = RedisDB(hostname=args.hostname, port=args.port)
-    asyncio.run(redis_mgr.task_manager(task=args.task, params=args.params))
+    asyncio.run(redis_mgr.task_manager(task=args.task, params=json.loads(args.params)))
         
         
 
